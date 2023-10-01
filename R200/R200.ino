@@ -18,21 +18,40 @@ unsigned int bytesReceived = 0;
 unsigned int parState = 0;
 unsigned int codeState = 0;
 
+
+R200 rfid;
+
+
 void setup() {
-  // Configure LED
-  pinMode(LED_BUILTIN, OUTPUT);
 
   // Intitialise Serial connection (for debugging)
   Serial.begin(115200);
   Serial.println(__FILE__ __DATE__);
-  
+
+  // Configure LED
+  pinMode(LED_BUILTIN, OUTPUT);
+
   // Initialise Serial2 connection to R200 module
   Serial2.begin(115200);
-  Serial2.write(ReadMultiCmd,10);
+  rfid.begin(Serial2);
+
+  delay(50);
+
+  // Get info
+  rfid.getModuleInfo();
+
+ // delay(100);
+
+  //rfid.setMultiplePollingMode();
+
+  
+  
+  //Serial2.begin(115200);
+  //Serial2.write(ReadMultiCmd,10);
 }
 
 void loop() {
-
+/*
   // Periodically re-send the read command
   if(millis() - lastResetTime > 1000000L){
       digitalWrite(LED_BUILTIN, HIGH);
@@ -56,7 +75,7 @@ void loop() {
     11 9B:CRC check
     29: Verification
     DD: End of frame
-    */
+
 
     // Read the data
     unsigned int incomingByte = Serial2.read();
@@ -111,4 +130,5 @@ void loop() {
       codeState = 0;
     }
   }
+  */
 }

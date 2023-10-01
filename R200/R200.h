@@ -3,21 +3,55 @@
 
 #include <stdint.h>
 #include <Arduino.h>
+#include <HardwareSerial.h>
+
+#define MAX_RECEIVED_LENGTH 10
+#define MAX_SEND_LENGTH 10
+
 
 class R200 {
-public:
 
+  private:
+    Stream* _serial;
+    unsigned long _timeOutTimer;
+    unsigned long _timeOutDuration = 500;
+    uint8_t _received[MAX_RECEIVED_LENGTH];
+    uint8_t _sending[MAX_SEND_LENGTH];
+    uint8_t _receivedIndex=0;
+    uint8_t calculateCheckSum(uint8_t *buffer);
+  
 
-// Header   Type    Command    Length (2bytes)   Parameter   Checksum    End
-//   AA      00       07           00 03         04 02 05       15        DD
+  public:
+
+    R200();
+    bool begin(Stream &stream);
+    void parseResponse();
+    bool available();
+    void getModuleInfo();
+    bool waitForResponse();
+    bool getResponse();
+
+    void setMultiplePollingMode();
+
+// Header   Type    Command    ParamLength (2bytes)   Parameter(s)   Checksum    End
+//   AA      00       07           00 03               04 02 05       15        DD
 //
 // Header is always 0xAA
 // Type is 00 for commands, 01 for responses, and 02 for notifications
 // Command is the instruction code
-// rNum of parameters about to be specified (2 bytes)
+// Num of parameters about to be specified (2 bytes)
 // Parameter(s)
 // Checksum is the LSB of the sum of bytes from the type to the last instruction parameter
 // Tail is always 0xDD
+
+  enum R200_FrameStructure : byte {
+    R200_HeaderPos = 0x00,
+    R200_TypePos = 0x01,
+    R200_CommandPos = 0x02,
+    R200_ParamLengthPos = 0x03,
+    R200_ParamsPos = 0x04,
+  };
+
 
   enum R200_FrameControl : byte {
     R200_FrameHeader = 0xAA,
@@ -31,7 +65,7 @@ public:
   };
 
   // 35.
-	enum PCD_Instruction : byte {
+	enum R200_Command : byte {
     CMD_GetModuleInfo = 0x03,
     CMD_SinglePollInstruction = 0x22,
     CMD_MultiplePollInstruction = 0x27,
