@@ -3,6 +3,9 @@
  * Copyright (c) 2023 Alastair Aitchison, Playful Technology
  */ 
 
+// INCLUDES
+#include "R200.h"
+
 // CONSTANTS
 // Command to issue to the R200 to set it to multiple read mode 
 const unsigned char ReadMultiCmd[10] = {0XAA,0X00,0X27,0X00,0X03,0X22,0XFF,0XFF,0X4A,0XDD};
