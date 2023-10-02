@@ -10,17 +10,148 @@ bool R200::begin(Stream &stream){
   return true;
 };
 
+bool R200::loop(){
+
+  uint8_t bytesReceived;
+  uint8_t incomingByte;
+  uint8_t cmdType;
+  uint16_t paramLength;
+  if(_serial->available()) {
+  do {
+    // Use readBytes() rather than just read() because it provides timeout
+    int count = _serial->readBytes(&incomingByte, 1);
+    // We couldn't read any data
+    if(count == 0) {
+       return false;
+    }
+    else {
+      bytesReceived++;
+      if(incomingByte == 0xAA){
+        bytesReceived = 1;
+        Serial.print("Frame Header received!" );
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(bytesReceived == 2){
+        // Frame Type
+        Serial.print("Frame Type received! ");
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(bytesReceived == 3){
+        cmdType = incomingByte;
+        Serial.print("CMD Type received!");
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(bytesReceived == 4){
+        // Param MSB
+        paramLength = incomingByte << 8;
+        Serial.print("Param MSB received! ");
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(bytesReceived == 5){
+        // Param LSB
+        paramLength += incomingByte;
+        Serial.print("Param LSB received! ");
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(bytesReceived == 6){
+        // Info Type
+        Serial.print("Info Type received! ");
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }      
+      else if(cmdType == CMD_GetModuleInfo && bytesReceived >= 7 && bytesReceived < paramLength+6){
+        Serial.print((char)incomingByte);
+      }
+      else if(cmdType == CMD_GetModuleInfo && bytesReceived == paramLength+6){
+        // CRC Type
+        Serial.print("Checksum received! ");
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(incomingByte == R200_FrameEnd){
+        Serial.print("Frame End received! ");
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+      else {
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.print(incomingByte, HEX); //echo
+      }
+
+    }
+  } while (incomingByte != R200_FrameEnd);
+
+  }
+
+  /*
+  if(_serial->available()){
+    Serial.println("Response received");
+    while(_serial->available() > 0) {
+      uint8_t incomingByte = _serial->read();
+      Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+      Serial.print((char)incomingByte);
+      Serial.print(",");
+      delay(10);
+    }
+  }
+  */
+
+/*
+  if(_serial->available()){
+    uint8_t incomingByte = _serial->read();
+    _bytesReceived++;
+    if(incomingByte == 0xAA){
+        bytesReceived = 1;
+        Serial.print("Frame Header received!" );
+        Serial.println(incomingByte, HEX);
+      }
+      else if(bytesReceived == 2){
+        // Frame Type
+        Serial.print("Frame Type received! ");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(bytesReceived == 3){
+        cmdType = incomingByte;
+        Serial.print("CMD Type received!");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(bytesReceived == 4){
+        // Param MSB
+        paramLength = incomingByte << 8;
+        Serial.print("Param MSB received! ");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(bytesReceived == 5){
+        // Param LSB
+        paramLength += incomingByte;
+        Serial.print("Param LSB received! ");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(bytesReceived >=7 && bytesReceived<(paramLength+6) && incomingByte != R200_FrameEnd){
+        Serial.print(incomingByte); //echo
+      }
+      else if(incomingByte != R200_FrameEnd){
+        Serial.write(incomingByte); //echo
+      }
+      else {
+        Serial.write(incomingByte); //echo
+      }
+  }
+  */
+}
 
 void R200::getModuleInfo(){
 
   const unsigned char GetModuleInfo[8] = {0xAA, 0x00, 0x03, 0x00, 0x01, 0x00, 0x04, 0xDD};
+  Serial.println("Writing Module Info");
   _serial->write(GetModuleInfo,8);
-  delay(50);
-  while(_serial->available() > 0) {
-    uint8_t incomingByte = _serial->read();
-    Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
-    Serial.print(incomingByte, HEX);
-    Serial.print(",");
+  for(int i=0; i<8; i++){
+    Serial.print(GetModuleInfo[i], HEX);
   }
 
   /*

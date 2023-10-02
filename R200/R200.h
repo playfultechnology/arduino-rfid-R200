@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <Arduino.h>
-#include <HardwareSerial.h>
+//#include <HardwareSerial.h>
 
 #define MAX_RECEIVED_LENGTH 10
 #define MAX_SEND_LENGTH 10
@@ -18,12 +18,15 @@ class R200 {
     uint8_t _received[MAX_RECEIVED_LENGTH];
     uint8_t _sending[MAX_SEND_LENGTH];
     uint8_t _receivedIndex=0;
+
+
     uint8_t calculateCheckSum(uint8_t *buffer);
   
 
   public:
 
     R200();
+    bool loop();
     bool begin(Stream &stream);
     void parseResponse();
     bool available();

@@ -4,6 +4,7 @@
  */ 
 
 // INCLUDES
+#include <HardwareSerial.h>
 #include "R200.h"
 
 // CONSTANTS
@@ -19,8 +20,8 @@ unsigned int parState = 0;
 unsigned int codeState = 0;
 
 
+HardwareSerial R200Serial(2);
 R200 rfid;
-
 
 void setup() {
 
@@ -32,8 +33,9 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
 
   // Initialise Serial2 connection to R200 module
-  Serial2.begin(115200);
-  rfid.begin(Serial2);
+  R200Serial.begin(115200, SERIAL_8N1, 16, 17);
+  //Serial2.begin(115200);
+  rfid.begin(R200Serial);
 
   delay(50);
 
@@ -44,13 +46,15 @@ void setup() {
 
   //rfid.setMultiplePollingMode();
 
-  
-  
   //Serial2.begin(115200);
   //Serial2.write(ReadMultiCmd,10);
 }
 
 void loop() {
+
+  rfid.loop();
+
+
 /*
   // Periodically re-send the read command
   if(millis() - lastResetTime > 1000000L){
@@ -59,26 +63,30 @@ void loop() {
       digitalWrite(LED_BUILTIN, LOW);
       lastResetTime = millis();
   }
- 
+ */
+ /*
   // If data is available on the serial port
-  if(Serial2.available() > 0) {
+  if(R200Serial.available() > 0) {
     // Example response
     // AA 02 22 00 11 C7 30 00 E2 80 68 90 00 00 50 0E 88 C6 A4 A7 11 9B 29 DD 
+    // AA:Frame Header
+    // 02:Instruction Code
+    // 22:Command Parameter
+    // 00 11:Instruction data length (0x11 = 17 bytes)
+    // C7：RSSI Signal Strength
+    // 30 00: Label PC code (factory reg code)
+    // E2 80 68 90 00 00 50 0E 88 C6 A4 A7：EPC code
+    // 11 9B:CRC check
+    // 29: Verification
+    // DD: End of frame
+
+    while(R200Serial.available()){
+      // Read the data
+      char incomingByte = R200Serial.read();
+      Serial.print(incomingByte, HEX);
+    }
+
     /*
-    AA:Frame Header
-    02:Instruction Code
-    22:Command Parameter
-    00 11:Instruction data length (0x11 = 17 bytes)
-    C7：RSSI Signal Strength
-    30 00: Label PC code (factory reg code)
-    E2 80 68 90 00 00 50 0E 88 C6 A4 A7：EPC code
-    11 9B:CRC check
-    29: Verification
-    DD: End of frame
-
-
-    // Read the data
-    unsigned int incomingByte = Serial2.read();
     // Is it a new instruction code?
     if((parState == 0) && (incomingByte == 0x02)) {
       parState = 1;
@@ -129,6 +137,7 @@ void loop() {
       parState = 0;
       codeState = 0;
     }
-  }
-  */
+
+    */
+  //}
 }
