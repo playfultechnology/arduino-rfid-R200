@@ -8,6 +8,9 @@
 #define MAX_RECEIVED_LENGTH 10
 #define MAX_SEND_LENGTH 10
 
+// https://docs.electron.id/el-uhf-rmt01/index.html
+// https://github.com/m5stack/M5Unit-UHF-RFID/blob/master/examples/Unit_RFID_M5Atom/Unit_RFID_M5Atom.ino
+
 
 class R200 {
 
@@ -17,11 +20,11 @@ class R200 {
     unsigned long _timeOutDuration = 500;
     uint8_t _received[MAX_RECEIVED_LENGTH];
     uint8_t _sending[MAX_SEND_LENGTH];
+    // How many bytes have been received in the current response
     uint8_t _receivedIndex=0;
 
-
     uint8_t calculateCheckSum(uint8_t *buffer);
-  
+    uint16_t arrayToUint16(uint8_t *array)
 
   public:
 
@@ -37,23 +40,29 @@ class R200 {
 
     void setMultiplePollingMode();
 
-// Header   Type    Command    ParamLength (2bytes)   Parameter(s)   Checksum    End
-//   AA      00       07           00 03               04 02 05       15        DD
-//
-// Header is always 0xAA
-// Type is 00 for commands, 01 for responses, and 02 for notifications
-// Command is the instruction code
-// Num of parameters about to be specified (2 bytes)
-// Parameter(s)
-// Checksum is the LSB of the sum of bytes from the type to the last instruction parameter
-// Tail is always 0xDD
+ // Commands sent to the reader, and responses received back, are sent as data frames, e.g.
+ // Header | Type | Command | ParamLength (2bytes) | Parameter(s) | Checksum | End
+ //   AA   |  00  |   07    |      00 03           |   04 02 05   |    15    | DD
+ //
+ // Frames always start with the header value 0xAA
+ // Type indicates a command to the reader (0x00), or a response (0x01), or notification (0x02) back from it
+ // Command is the instruction to be performed, or the response from that instruction
+ // ParamLength gives 2-byte (MSB then LSB) number of parameters being passed in the frame
+ // Params may be zero or more
+ // Checksum is the LSB of the sum of bytes from the type to the last instruction parameter (i.e. excluding Frame Header)
+ // Frames always end with the tail value 0xDD
 
+  // Position of elements in the frame definition, as offset from the header
   enum R200_FrameStructure : byte {
     R200_HeaderPos = 0x00,
     R200_TypePos = 0x01,
     R200_CommandPos = 0x02,
-    R200_ParamLengthPos = 0x03,
-    R200_ParamsPos = 0x04,
+    R200_ParamLengthMSBPos = 0x03,
+    R200_ParamLengthLSBPos = 0x04,
+    // Offset of other response elements - parameters, checksum, and frame end - are variable
+    // R200_ParamPos = if(R200_ParamLengthMSBPos << 8 + R200_ParamLengthLSBPos) > 0) { 0x05 } else { null }
+    // R200_ChecksumPos = 0x05 + (R200_ParamLengthMSBPos << 8 + R200_ParamLengthLSBPos)
+    // R200_EndPos = 0x06 + (R200_ParamLengthMSBPos << 8 + R200_ParamLengthLSBPos)
   };
 
 

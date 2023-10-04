@@ -120,14 +120,6 @@ bool R200::loop(){
     }
 
 
-
-
-
-
-
-
-
-
       else if(cmdType == CMD_SinglePollInstruction && bytesReceived == 6){
         // RSSI
         Serial.print("RSSI received! ");
@@ -244,6 +236,20 @@ bool R200::loop(){
   }
   */
 }
+
+    // Example response
+    // AA 02 22 00 11 C7 30 00 E2 80 68 90 00 00 50 0E 88 C6 A4 A7 11 9B 29 DD 
+    // AA:Frame Header
+    // 02:Instruction Code
+    // 22:Command Parameter
+    // 00 11:Instruction data length (0x11 = 17 bytes)
+    // C7：RSSI Signal Strength
+    // 30 00: Label PC code (factory reg code)
+    // E2 80 68 90 00 00 50 0E 88 C6 A4 A7：EPC code
+    // 11 9B:CRC check
+    // 29: Verification
+    // DD: End of frame
+
 
 void R200::getModuleInfo(){
 
@@ -414,4 +420,11 @@ void R200::parseResponse(){
     uint8_t incomingByte = _serial->read();
     Serial.print(incomingByte, HEX);
   }
+}
+
+uint16_t R200::arrayToUint16(uint8_t *array){
+  uint16_t value = *array;
+  value <<=8;
+  value += *(array+1);
+  return value;
 }
