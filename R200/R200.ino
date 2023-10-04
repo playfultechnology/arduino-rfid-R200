@@ -51,19 +51,17 @@ void setup() {
 }
 
 void loop() {
-
   rfid.loop();
 
 
-/*
   // Periodically re-send the read command
-  if(millis() - lastResetTime > 1000000L){
+  if(millis() - lastResetTime > 1000L){
       digitalWrite(LED_BUILTIN, HIGH);
-      Serial2.write(ReadMultiCmd,10);
+      rfid.poll();
       digitalWrite(LED_BUILTIN, LOW);
       lastResetTime = millis();
   }
- */
+ 
  /*
   // If data is available on the serial port
   if(R200Serial.available() > 0) {

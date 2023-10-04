@@ -26,6 +26,7 @@ class R200 {
   public:
 
     R200();
+    void poll();
     bool loop();
     bool begin(Stream &stream);
     void parseResponse();
@@ -96,6 +97,7 @@ class R200 {
     CMD_ControlIOPort = 0x1A,
     CMD_ModuleSleep = 0x17,
     CMD_SetModuleIdleSleepTime = 0x1D,
+    CMD_ExecutionFailure = 0xFF,
   };
 };
 #endif

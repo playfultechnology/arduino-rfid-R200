@@ -16,15 +16,24 @@ bool R200::loop(){
   uint8_t incomingByte;
   uint8_t cmdType;
   uint16_t paramLength;
-  if(_serial->available()) {
-  do {
+  uint8_t checksum;
+  uint8_t _PC[2];
+  uint8_t _EPC[12];
+  uint8_t _CRC[2];
+
+  //if(_serial->available() > 0) {
+  //  Serial.print("Bytes available:");
+  //  Serial.println(_serial->available());
+  while(_serial->available() > 0) {
     // Use readBytes() rather than just read() because it provides timeout
     int count = _serial->readBytes(&incomingByte, 1);
     // We couldn't read any data
     if(count == 0) {
-       return false;
+      // Serial.print("Well, this is awkward....");
+      return false;
     }
     else {
+
       bytesReceived++;
       if(incomingByte == 0xAA){
         bytesReceived = 1;
@@ -58,21 +67,111 @@ bool R200::loop(){
         Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
         Serial.println(incomingByte, HEX);
       }
-      else if(bytesReceived == 6){
+
+
+
+      else if(cmdType == CMD_GetModuleInfo && bytesReceived == 6){
         // Info Type
         Serial.print("Info Type received! ");
         Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
         Serial.println(incomingByte, HEX);
-      }      
+      }
       else if(cmdType == CMD_GetModuleInfo && bytesReceived >= 7 && bytesReceived < paramLength+6){
         Serial.print((char)incomingByte);
       }
       else if(cmdType == CMD_GetModuleInfo && bytesReceived == paramLength+6){
         // CRC Type
+        Serial.println("");
         Serial.print("Checksum received! ");
         Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
         Serial.println(incomingByte, HEX);
       }
+
+
+    else if(cmdType == CMD_ExecutionFailure && bytesReceived == 6){
+      Serial.print("Execution Failure");
+      switch(incomingByte){
+        case 0x17:
+          Serial.println("Command error");
+          break;
+        case 0x20:
+          Serial.println("FHSS fail");
+          break;
+        case 0x15:
+          Serial.println("Inventory Fail");
+          break;
+        case 0x16:
+          Serial.println("Access Fail");
+          break;
+        case 0x09:
+          Serial.println("Read fail");
+          break;
+        case 0x10:
+          Serial.println("Write fail");
+          break;
+        case 0x13:
+          Serial.println("Lock fail");
+          break;
+        case 0x12:
+          Serial.println("Kill fail");
+          break;
+
+      }
+    }
+
+
+
+
+
+
+
+
+
+
+      else if(cmdType == CMD_SinglePollInstruction && bytesReceived == 6){
+        // RSSI
+        Serial.print("RSSI received! ");
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(cmdType == CMD_SinglePollInstruction && bytesReceived == 7){
+        Serial.print("PC(MSB) received! ");
+        _PC[0] = incomingByte;
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+      else if(cmdType == CMD_SinglePollInstruction && bytesReceived == 8){
+        Serial.print("PC(LSB) received! ");
+        _PC[1] = incomingByte;
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+
+      else if(cmdType == CMD_SinglePollInstruction && bytesReceived == 9) {
+        Serial.print("EPC Received! ");
+        _EPC[0] = incomingByte;
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      } 
+      else if(cmdType == CMD_SinglePollInstruction && bytesReceived > 9 && bytesReceived <= 20) {
+        _EPC[bytesReceived-9] = incomingByte;
+        Serial.print(incomingByte < 0x10 ? "0" : "");
+        Serial.print(incomingByte, HEX);
+      }
+      else if(cmdType == CMD_SinglePollInstruction && bytesReceived > 20 && bytesReceived <= 22) {
+        _CRC[bytesReceived-21] = incomingByte;
+        Serial.print(incomingByte < 0x10 ? "0" : "");
+        Serial.print(incomingByte, HEX);
+      }
+      else if(bytesReceived == paramLength+6){
+        // CRC Type
+        Serial.println("");
+        Serial.print("Checksum received! ");
+        Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
+        Serial.println(incomingByte, HEX);
+      }
+
+
       else if(incomingByte == R200_FrameEnd){
         Serial.print("Frame End received! ");
         Serial.print(incomingByte < 0x10 ? "0x0" : "0x");
@@ -84,7 +183,8 @@ bool R200::loop(){
       }
 
     }
-  } while (incomingByte != R200_FrameEnd);
+  //} 
+  //while (_serial->available() > 0 && incomingByte != R200_FrameEnd);
 
   }
 
@@ -148,12 +248,12 @@ bool R200::loop(){
 void R200::getModuleInfo(){
 
   const unsigned char GetModuleInfo[8] = {0xAA, 0x00, 0x03, 0x00, 0x01, 0x00, 0x04, 0xDD};
-  Serial.println("Writing Module Info");
+  Serial.print("Requesting Module Info; sending command 0x");
   _serial->write(GetModuleInfo,8);
   for(int i=0; i<8; i++){
     Serial.print(GetModuleInfo[i], HEX);
   }
-
+  Serial.println("");
   /*
   uint8_t commandFrame[MAX_SEND_LENGTH] = {0};
 
@@ -172,6 +272,24 @@ void R200::getModuleInfo(){
   */
 }
 
+
+
+void R200::poll(){
+  uint8_t commandFrame[MAX_SEND_LENGTH] = {0};
+  // {0xAA0022000022DD};
+  commandFrame[0] = R200_FrameHeader;
+  commandFrame[1] = FrameType_Command;
+  commandFrame[2] = CMD_SinglePollInstruction;
+  commandFrame[3] = 0x00; // ParamLen MSB
+  commandFrame[4] = 0x00; // ParamLen LSB
+  commandFrame[5] = 0x22;  // Checksum
+  commandFrame[6] = R200_FrameEnd;
+
+  _serial->write(commandFrame, 7);
+}
+
+
+
 void R200::setMultiplePollingMode(){
   uint8_t commandFrame[MAX_SEND_LENGTH] = {0};
 
@@ -187,11 +305,11 @@ void R200::setMultiplePollingMode(){
   commandFrame[7] = 0xFF;  // Param
   commandFrame[8] = 0x4A; // LSB of commandFrame[2] + commandFrame[3] + commandFrame[4] + commandFrame[5] + [6] + [7]
   // (Full checksum is 0x24A)
-  commandFrame[9] = 0xDD;
+  commandFrame[9] = R200_FrameEnd;
 
   _serial->write(commandFrame, 10);
 
-  getResponse();
+ // getResponse();
 }
 
 
