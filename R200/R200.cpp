@@ -4,8 +4,9 @@
 // ctor
 R200::R200() {};
 
-bool R200::begin(Stream &stream){
-  _serial = &stream;
+bool R200::begin(HardwareSerial *serial, int baud, uint8_t RxPin, uint8_t TxPin){
+  _serial = serial;
+  _serial->begin(baud, SERIAL_8N1, RxPin, TxPin);
   //_serial->setTimeout(50);
   return true;
 };

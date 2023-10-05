@@ -20,9 +20,9 @@ void setup() {
   Serial.println(__FILE__ __DATE__);
 
   // Initialise Serial2 connection to R200 module
-  R200Serial.begin(115200, SERIAL_8N1, 16, 17);
+  //R200Serial.begin(115200, SERIAL_8N1, 16, 17);
   //Serial2.begin(115200);
-  rfid.begin(R200Serial);
+  rfid.begin(&Serial2, 115200, 16, 17);
 
   delay(50);
 

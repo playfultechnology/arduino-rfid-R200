@@ -15,7 +15,7 @@
 class R200 {
 
   private:
-    Stream* _serial;
+    HardwareSerial *_serial;
     unsigned long _timeOutTimer;
     unsigned long _timeOutDuration = 500;
     uint8_t _received[MAX_RECEIVED_LENGTH];
@@ -24,14 +24,14 @@ class R200 {
     uint8_t _receivedIndex=0;
 
     uint8_t calculateCheckSum(uint8_t *buffer);
-    uint16_t arrayToUint16(uint8_t *array)
+    uint16_t arrayToUint16(uint8_t *array);
 
   public:
 
     R200();
     void poll();
     bool loop();
-    bool begin(Stream &stream);
+    bool begin(HardwareSerial *serial = &Serial2, int baud = 115200, uint8_t RxPin = 16, uint8_t TxPin = 17);
     void parseResponse();
     bool available();
     void getModuleInfo();
