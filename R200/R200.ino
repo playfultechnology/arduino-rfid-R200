@@ -4,13 +4,16 @@
  */ 
 
 // INCLUDES
-#include <HardwareSerial.h>
+
 #include "R200.h"
 
 // GLOBALS
 unsigned long lastResetTime = 0;
-
+/*
+#include <HardwareSerial.h>
 HardwareSerial RFIDSerial(2);
+HardwareSerial *mySerial;
+*/
 R200 rfid;
 
 void setup() {
@@ -23,15 +26,20 @@ void setup() {
   //R200Serial.begin(115200, SERIAL_8N1, 16, 17);
   //Serial2.begin(115200);
   //rfid.begin(&R200Serial, 115200, 16, 17);
-  rfid.begin(&RFIDSerial, 115200, 16, 17);
+  //rfid.begin(RFIDSerial, 115200, 16, 17);
 
+  rfid.begin(&Serial2, 115200, 16, 17);
+
+
+  //mySerial = &Serial2;
+  //rfid.begin(mySerial, 115200, 16, 17);
 
   delay(50);
 
   // Get info
   rfid.getModuleInfo();
 
-    delay(3000);
+  delay(1000);
 }
 
 void loop() {

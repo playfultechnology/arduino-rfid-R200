@@ -37,15 +37,33 @@ void printHexWord(char* name, uint8_t MSB, uint8_t LSB){
   Serial.println(LSB, HEX);
 }
 
+uint8_t getEPC(){
+
+}
+
+
 void R200::loop(){
-  // Has any new data been received?
+  /*
+  if(!dataAvailable()){
+    return;
+  }
+  if(!receiveData()){
+    return;
+  }
+  if(!dataIsValid()){
+    return;
+  }
+  parseReceivedData();
+  */
+  // Has any new data been received?      
   if(dataAvailable()){
     // Attempt to receive a full frame of data
     if(receiveData()){
       if(dataIsValid()){
         // If a full frame of data has been received, parse it
-        //parseData();
-        parseReceivedData();/*
+        // TODO For reasons that I absolutely cannot fathom, this section does not work if moved into
+        // a separate function....
+        //parseReceivedData();
         switch(_buffer[R200_CommandPos]){
           case CMD_GetModuleInfo:
             for (uint8_t i=0; i<RX_BUFFER_LENGTH-8; i++) {
@@ -57,7 +75,7 @@ void R200::loop(){
             }
             break;
           case CMD_SinglePollInstruction:
-            // Example response
+            // Example successful response
             // AA 02 22 00 11 C7 30 00 E2 80 68 90 00 00 50 0E 88 C6 A4 A7 11 9B 29 DD 
             // AA:Frame Header
             // 02:Instruction Code
@@ -68,10 +86,11 @@ void R200::loop(){
             // E2 80 68 90 00 00 50 0E 88 C6 A4 A7：EPC code
             // 11 9B:CRC check
             // 29: Verification
-            // DD: End of frame        
+            // DD: End of frame
             printHexByte("RSSI", _buffer[6]);
             printHexWord("PC", _buffer[7], _buffer[8]);
             printHexBytes("EPC(", &_buffer[9], 12);
+            memcpy(uid, _buffer[9], 12);
             //printHexByte("CRC", _buffer[] )
             break;
           case CMD_ExecutionFailure:
@@ -104,7 +123,6 @@ void R200::loop(){
             break;
         }
         Serial.println("");
-        */
       }
     }
   }
@@ -138,6 +156,16 @@ bool R200::dataAvailable(){
   return _serial->available() >0;
 }
 
+void R200::dumpUIDToSerial(){
+  Serial.print("Dumping UID...");
+  Serial.print("0x");
+  for (uint8_t i=0; i< 12; i++){
+    Serial.print(uid[i] < 0x10 ? "0" : "");
+    Serial.print(uid[i], HEX);
+  }
+  Serial.println(". Done.");
+}
+
 void R200::dumpReceiveBufferToSerial(){
   Serial.print("Dumping buffer...");
   Serial.print("0x");
@@ -150,7 +178,20 @@ void R200::dumpReceiveBufferToSerial(){
 
 // Parse data that has been placed in the receive buffer
 bool R200::parseReceivedData() {
-  Serial.println("Hi");
+  switch(_buffer[R200_CommandPos]){
+    case CMD_GetModuleInfo:
+      break;
+    case CMD_SinglePollInstruction:
+      for(uint8_t i=8; i<20; i++) {
+        uid[i-8] = _buffer[i];
+      };
+      //memcpy(uid, _buffer+9, 12);
+      break;
+    case CMD_ExecutionFailure:
+      break;
+    default:
+      break;
+  }
 }
 
 /*
@@ -174,7 +215,8 @@ bool R200::receiveData(unsigned long timeOut){
   unsigned long startTime = millis();
   uint8_t bytesReceived = 0;
   // Clear the buffer
-  memset(_buffer, 0, sizeof _buffer);
+  //memset(_buffer, 0, sizeof _buffer);
+  for (int i = 0; i < RX_BUFFER_LENGTH; i++) { _buffer[i] = 0; }
   while ((millis() - startTime) < timeOut) {
     while (_serial->available()) {
       uint8_t b = _serial->read();

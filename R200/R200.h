@@ -19,6 +19,8 @@ class R200 {
     void dumpReceiveBufferToSerial();
     uint8_t flush();
 
+    uint8_t uid[12] = {0};
+
   public:
     R200();
     bool begin(HardwareSerial *serial = &Serial2, int baud = 115200, uint8_t RxPin = 16, uint8_t TxPin = 17);
@@ -27,6 +29,12 @@ class R200 {
     void setMultiplePollingMode();
     void getModuleInfo();
     bool dataAvailable();
+
+    //bool newCardPresent();
+    //bool isCardPresent();
+    void dumpUIDToSerial();
+
+
 
  // Commands sent to the reader, and responses received back, are sent as data frames, e.g.
  // Header | Type | Command | ParamLength (2bytes) | Parameter(s) | Checksum | End
