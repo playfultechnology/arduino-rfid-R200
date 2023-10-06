@@ -3,42 +3,28 @@
 
 #include <stdint.h>
 #include <Arduino.h>
-//#include <HardwareSerial.h>
 
-#define MAX_RECEIVED_LENGTH 10
-#define MAX_SEND_LENGTH 10
-
-// https://docs.electron.id/el-uhf-rmt01/index.html
-// https://github.com/m5stack/M5Unit-UHF-RFID/blob/master/examples/Unit_RFID_M5Atom/Unit_RFID_M5Atom.ino
-
+#define RX_BUFFER_LENGTH 255
 
 class R200 {
 
   private:
     HardwareSerial *_serial;
-    unsigned long _timeOutTimer;
-    unsigned long _timeOutDuration = 500;
-    uint8_t _received[MAX_RECEIVED_LENGTH];
-    uint8_t _sending[MAX_SEND_LENGTH];
-    // How many bytes have been received in the current response
-    uint8_t _receivedIndex=0;
-
+    uint8_t _buffer[RX_BUFFER_LENGTH] = {0};
     uint8_t calculateCheckSum(uint8_t *buffer);
     uint16_t arrayToUint16(uint8_t *array);
+    bool parseData();
+    bool receiveData(unsigned long timeOut = 500);
+    void dumpReceiveBufferToSerial();
 
   public:
-
     R200();
-    void poll();
-    bool loop();
     bool begin(HardwareSerial *serial = &Serial2, int baud = 115200, uint8_t RxPin = 16, uint8_t TxPin = 17);
-    void parseResponse();
-    bool available();
-    void getModuleInfo();
-    bool waitForResponse();
-    bool getResponse();
-
+    void loop();
+    void poll();
     void setMultiplePollingMode();
+    void getModuleInfo();
+    bool dataAvailable();
 
  // Commands sent to the reader, and responses received back, are sent as data frames, e.g.
  // Header | Type | Command | ParamLength (2bytes) | Parameter(s) | Checksum | End
@@ -64,7 +50,6 @@ class R200 {
     // R200_ChecksumPos = 0x05 + (R200_ParamLengthMSBPos << 8 + R200_ParamLengthLSBPos)
     // R200_EndPos = 0x06 + (R200_ParamLengthMSBPos << 8 + R200_ParamLengthLSBPos)
   };
-
 
   enum R200_FrameControl : byte {
     R200_FrameHeader = 0xAA,
