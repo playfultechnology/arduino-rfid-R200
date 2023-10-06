@@ -4,13 +4,13 @@
  */ 
 
 // INCLUDES
-//#include <HardwareSerial.h>
+#include <HardwareSerial.h>
 #include "R200.h"
 
 // GLOBALS
 unsigned long lastResetTime = 0;
 
-//HardwareSerial R200Serial(2);
+HardwareSerial RFIDSerial(2);
 R200 rfid;
 
 void setup() {
@@ -23,7 +23,7 @@ void setup() {
   //R200Serial.begin(115200, SERIAL_8N1, 16, 17);
   //Serial2.begin(115200);
   //rfid.begin(&R200Serial, 115200, 16, 17);
-rfid.begin(&Serial2, 115200, 16, 17);
+  rfid.begin(&RFIDSerial, 115200, 16, 17);
 
 
   delay(50);
@@ -36,14 +36,15 @@ rfid.begin(&Serial2, 115200, 16, 17);
 
 void loop() {
   rfid.loop();
-/*
+
   // Periodically re-send the read command
-  if(millis() - lastResetTime > 1000L){
-      digitalWrite(LED_BUILTIN, HIGH);
+  if(millis() - lastResetTime > 4000){
+    //  digitalWrite(LED_BUILTIN, HIGH);
       rfid.poll();
-      digitalWrite(LED_BUILTIN, LOW);
+  //rfid.getModuleInfo();
+    //  digitalWrite(LED_BUILTIN, LOW);
       lastResetTime = millis();
   }
-  */
-
+  
+  delay(1000);
 }

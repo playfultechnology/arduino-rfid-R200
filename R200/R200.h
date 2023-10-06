@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <Arduino.h>
 
-#define RX_BUFFER_LENGTH 255
+#define RX_BUFFER_LENGTH 64
 
 class R200 {
 
@@ -13,9 +13,11 @@ class R200 {
     uint8_t _buffer[RX_BUFFER_LENGTH] = {0};
     uint8_t calculateCheckSum(uint8_t *buffer);
     uint16_t arrayToUint16(uint8_t *array);
-    bool parseData();
+    bool parseReceivedData();
+    bool dataIsValid();
     bool receiveData(unsigned long timeOut = 500);
     void dumpReceiveBufferToSerial();
+    uint8_t flush();
 
   public:
     R200();
