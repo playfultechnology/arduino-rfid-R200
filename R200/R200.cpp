@@ -43,18 +43,6 @@ uint8_t getEPC(){
 
 
 void R200::loop(){
-  /*
-  if(!dataAvailable()){
-    return;
-  }
-  if(!receiveData()){
-    return;
-  }
-  if(!dataIsValid()){
-    return;
-  }
-  parseReceivedData();
-  */
   // Has any new data been received?      
   if(dataAvailable()){
     // Attempt to receive a full frame of data
@@ -73,6 +61,7 @@ void R200::loop(){
                 break;
               }
             }
+            Serial.println("");
             break;
           case CMD_SinglePollInstruction:
             // Example successful response
@@ -87,42 +76,47 @@ void R200::loop(){
             // 11 9B:CRC check
             // 29: Verification
             // DD: End of frame
+            /*
             printHexByte("RSSI", _buffer[6]);
             printHexWord("PC", _buffer[7], _buffer[8]);
             printHexBytes("EPC(", &_buffer[9], 12);
-            memcpy(uid, _buffer[9], 12);
+            */
+            if(memcmp(uid, &_buffer) != 0) {
+              Serial.print("New card detected!");
+              memcpy(uid, &_buffer[9], 12);
+            }
+            else {
+              Serial.print("Same card still present");
+            }
             //printHexByte("CRC", _buffer[] )
             break;
           case CMD_ExecutionFailure:
-            switch(_buffer[6]){
-              case 0x17:
+            switch(_buffer[R200_ParamPos]){
+              case ERR_CommandError:
                 Serial.println("Command error");
                 break;
-              case 0x20:
-                Serial.println("FHSS fail");
+              case ERR_InventoryFail:
+                // This is not necessarily a "failure" - it just means that there are no cards in range
+                Serial.print("No card detected!");
+                memset(uid, 0, sizeof uid);
+                //Serial.println("Inventory Fail");
                 break;
-              case 0x15:
-                Serial.println("Inventory Fail");
-                break;
-              case 0x16:
+              case ERR_AccessFail:
                 Serial.println("Access Fail");
                 break;
-              case 0x09:
+              case ERR_ReadFail:
                 Serial.println("Read fail");
                 break;
-              case 0x10:
+              case ERR_WriteFail:
                 Serial.println("Write fail");
                 break;
-              case 0x13:
-                Serial.println("Lock fail");
-                break;
-              case 0x12:
-                Serial.println("Kill fail");
+              default:
+                Serial.print("Fail code ");
+                Serial.println(_buffer[R200_ParamPos], HEX);
                 break;
             }
             break;
         }
-        Serial.println("");
       }
     }
   }
@@ -131,7 +125,7 @@ void R200::loop(){
 // Has any data been received from the reader?
 bool R200::dataIsValid(){
   
-  Serial.print("Checking Data Valid");
+  //Serial.println("Checking Data Valid");
   //dumpReceiveBufferToSerial();
   uint8_t CRC = calculateCheckSum(_buffer);
 
@@ -152,22 +146,22 @@ bool R200::dataIsValid(){
 
 // Has any data been received from the reader?
 bool R200::dataAvailable(){
-  Serial.println("Checking Data Available");
+  //Serial.println("Checking Data Available");
   return _serial->available() >0;
 }
 
 void R200::dumpUIDToSerial(){
-  Serial.print("Dumping UID...");
+  //Serial.print("Dumping UID...");
   Serial.print("0x");
   for (uint8_t i=0; i< 12; i++){
     Serial.print(uid[i] < 0x10 ? "0" : "");
     Serial.print(uid[i], HEX);
   }
-  Serial.println(". Done.");
+  //Serial.println(". Done.");
 }
 
 void R200::dumpReceiveBufferToSerial(){
-  Serial.print("Dumping buffer...");
+  //Serial.print("Dumping buffer...");
   Serial.print("0x");
   for (uint8_t i=0; i< RX_BUFFER_LENGTH; i++){
     Serial.print(_buffer[i] < 0x10 ? "0" : "");
@@ -211,7 +205,7 @@ uint8_t R200::flush(){
 // (e.g. when set to automatic polling mode)
 // Returns true if a complete frame of data is read within the allotted timeout
 bool R200::receiveData(unsigned long timeOut){
-  Serial.println("Receiving Data");
+  //Serial.println("Receiving Data");
   unsigned long startTime = millis();
   uint8_t bytesReceived = 0;
   // Clear the buffer
@@ -240,7 +234,7 @@ bool R200::receiveData(unsigned long timeOut){
   return false;
 }
 
-void R200::getModuleInfo(){
+void R200::dumpModuleInfo(){
   uint8_t commandFrame[8] = {0};
   commandFrame[0] = R200_FrameHeader;
   commandFrame[1] = FrameType_Command;

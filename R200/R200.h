@@ -27,7 +27,7 @@ class R200 {
     void loop();
     void poll();
     void setMultiplePollingMode();
-    void getModuleInfo();
+    void dumpModuleInfo();
     bool dataAvailable();
 
     //bool newCardPresent();
@@ -55,6 +55,7 @@ class R200 {
     R200_CommandPos = 0x02,
     R200_ParamLengthMSBPos = 0x03,
     R200_ParamLengthLSBPos = 0x04,
+    R200_ParamPos = 0x05,
     // Offset of other response elements - parameters, checksum, and frame end - are variable
     // R200_ParamPos = if(R200_ParamLengthMSBPos << 8 + R200_ParamLengthLSBPos) > 0) { 0x05 } else { null }
     // R200_ChecksumPos = 0x05 + (R200_ParamLengthMSBPos << 8 + R200_ParamLengthLSBPos)
@@ -102,6 +103,17 @@ class R200 {
     CMD_ModuleSleep = 0x17,
     CMD_SetModuleIdleSleepTime = 0x1D,
     CMD_ExecutionFailure = 0xFF,
+  };
+
+  enum R200_ErrorCode : byte {
+    ERR_CommandError = 0x17,
+    ERR_FHSSFail = 0x20,
+    ERR_InventoryFail = 0x15,
+    ERR_AccessFail = 0x16,
+    ERR_ReadFail = 0x09,
+    ERR_WriteFail = 0x10,
+    ERR_LockFail = 0x13,
+    ERR_KillFail = 0x12,
   };
 };
 #endif
