@@ -1,6 +1,9 @@
 #ifndef R200_h
 #define R200_h
 
+// Generate additional debug information to the serial connection when defined
+// #define DEBUG
+
 #include <stdint.h>
 #include <Arduino.h>
 
@@ -19,14 +22,17 @@ class R200 {
     void dumpReceiveBufferToSerial();
     uint8_t flush();
 
-    uint8_t uid[12] = {0};
+    const uint8_t blankUid[12] = {0};
 
   public:
     R200();
+
+    uint8_t uid[12] = {0};
+
     bool begin(HardwareSerial *serial = &Serial2, int baud = 115200, uint8_t RxPin = 16, uint8_t TxPin = 17);
     void loop();
     void poll();
-    void setMultiplePollingMode();
+    void setMultiplePollingMode(bool enable=true);
     void dumpModuleInfo();
     bool dataAvailable();
 

@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "r200.h"
 
-// ctor
+// Constructor
 R200::R200() {};
 
 bool R200::begin(HardwareSerial *serial, int baud, uint8_t RxPin, uint8_t TxPin){
@@ -37,11 +37,6 @@ void printHexWord(char* name, uint8_t MSB, uint8_t LSB){
   Serial.println(LSB, HEX);
 }
 
-uint8_t getEPC(){
-
-}
-
-
 void R200::loop(){
   // Has any new data been received?      
   if(dataAvailable()){
@@ -51,7 +46,7 @@ void R200::loop(){
         // If a full frame of data has been received, parse it
         // TODO For reasons that I absolutely cannot fathom, this section does not work if moved into
         // a separate function....
-        //parseReceivedData();
+        // parseReceivedData();
         switch(_buffer[R200_CommandPos]){
           case CMD_GetModuleInfo:
             for (uint8_t i=0; i<RX_BUFFER_LENGTH-8; i++) {
@@ -76,19 +71,29 @@ void R200::loop(){
             // 11 9B:CRC check
             // 29: Verification
             // DD: End of frame
-            /*
-            printHexByte("RSSI", _buffer[6]);
-            printHexWord("PC", _buffer[7], _buffer[8]);
-            printHexBytes("EPC(", &_buffer[9], 12);
-            */
-            if(memcmp(uid, &_buffer) != 0) {
-              Serial.print("New card detected!");
+            #ifdef DEBUG
+              printHexByte("RSSI", _buffer[6]);
+              printHexWord("PC", _buffer[7], _buffer[8]);
+              printHexBytes("EPC(", &_buffer[9], 12);
+            #endif
+            if(memcmp(uid, &_buffer[9], 12) != 0) {
               memcpy(uid, &_buffer[9], 12);
+              #ifdef DEBUG
+                Serial.print("New card detected : ");
+                dumpUIDToSerial();
+                Serial.println("");
+              #endif
             }
             else {
-              Serial.print("Same card still present");
+              #ifdef DEBUG
+                Serial.print("Same card still present : ");
+                dumpUIDToSerial();
+                Serial.println("");
+              #endif
             }
-            //printHexByte("CRC", _buffer[] )
+            #ifdef DEBUG
+              printHexWord("CRC", _buffer[20], _buffer[21]);
+            #endif
             break;
           case CMD_ExecutionFailure:
             switch(_buffer[R200_ParamPos]){
@@ -97,22 +102,29 @@ void R200::loop(){
                 break;
               case ERR_InventoryFail:
                 // This is not necessarily a "failure" - it just means that there are no cards in range
-                Serial.print("No card detected!");
-                memset(uid, 0, sizeof uid);
-                //Serial.println("Inventory Fail");
+                // Serial.print("No card detected!");
+                // If there was previously a uid
+                if(memcmp(uid, blankUid, sizeof uid) != 0) {
+                  #ifdef DEBUG
+                    Serial.print("Card removed : ");
+                    dumpUIDToSerial();
+                    Serial.println("");
+                  #endif
+                  memset(uid, 0, sizeof uid);
+                }
                 break;
               case ERR_AccessFail:
-                Serial.println("Access Fail");
+                // Serial.println("Access Fail");
                 break;
               case ERR_ReadFail:
-                Serial.println("Read fail");
+                // Serial.println("Read fail");
                 break;
               case ERR_WriteFail:
-                Serial.println("Write fail");
+                // Serial.println("Write fail");
                 break;
               default:
-                Serial.print("Fail code ");
-                Serial.println(_buffer[R200_ParamPos], HEX);
+                // Serial.print("Fail code ");
+                // Serial.println(_buffer[R200_ParamPos], HEX);
                 break;
             }
             break;
@@ -124,18 +136,17 @@ void R200::loop(){
 
 // Has any data been received from the reader?
 bool R200::dataIsValid(){
-  
-  //Serial.println("Checking Data Valid");
-  //dumpReceiveBufferToSerial();
+  // Serial.println("Checking Data Valid");
+  // dumpReceiveBufferToSerial();
   uint8_t CRC = calculateCheckSum(_buffer);
 
   // NOTE
   // You can't just be smart and do this in one line, because
-  // the pointer reference f*ck up.
+  // the pointer reference f*cks up.
   // uint16_t paramLength = _buffer[3]<<8 + _buffer[4];
   uint16_t paramLength = _buffer[3];
   paramLength<<=8;
-  paramLength+= _buffer[4];
+  paramLength += _buffer[4];
   uint8_t CRCpos = 5 + paramLength;
 
   // Serial.print(CRC, HEX);
@@ -150,18 +161,21 @@ bool R200::dataAvailable(){
   return _serial->available() >0;
 }
 
+/*
+ * Dumps the most recently read UID to the serial output
+ */ 
 void R200::dumpUIDToSerial(){
-  //Serial.print("Dumping UID...");
+  // Serial.print("Dumping UID...");
   Serial.print("0x");
   for (uint8_t i=0; i< 12; i++){
     Serial.print(uid[i] < 0x10 ? "0" : "");
     Serial.print(uid[i], HEX);
   }
-  //Serial.println(". Done.");
+  // Serial.println(". Done.");
 }
 
 void R200::dumpReceiveBufferToSerial(){
-  //Serial.print("Dumping buffer...");
+  // Serial.print("Dumping buffer...");
   Serial.print("0x");
   for (uint8_t i=0; i< RX_BUFFER_LENGTH; i++){
     Serial.print(_buffer[i] < 0x10 ? "0" : "");
@@ -176,6 +190,12 @@ bool R200::parseReceivedData() {
     case CMD_GetModuleInfo:
       break;
     case CMD_SinglePollInstruction:
+      for(uint8_t i=8; i<20; i++) {
+        uid[i-8] = _buffer[i];
+      };
+      //memcpy(uid, _buffer+9, 12);
+      break;
+    case CMD_MultiplePollInstruction:
       for(uint8_t i=8; i<20; i++) {
         uid[i-8] = _buffer[i];
       };
@@ -244,12 +264,11 @@ void R200::dumpModuleInfo(){
   commandFrame[5] = 0x00;  // Param
   commandFrame[6] = 0x04; // LSB of commandFrame[2] + commandFrame[3] + commandFrame[4] + commandFrame[5]
   commandFrame[7] = R200_FrameEnd;
-
   _serial->write(commandFrame, 8);
 }
 
 /**
- * Send single poll command
+ * Send single poll command to the reader
  */
 void R200::poll(){
   uint8_t commandFrame[7] = {0};
@@ -260,30 +279,38 @@ void R200::poll(){
   commandFrame[4] = 0x00; // ParamLen LSB
   commandFrame[5] = 0x22;  // Checksum
   commandFrame[6] = R200_FrameEnd;
-
   _serial->write(commandFrame, 7);
 }
 
-
-void R200::setMultiplePollingMode(){
-  uint8_t commandFrame[10] = {0};
-  commandFrame[0] = R200_FrameHeader;
-  commandFrame[1] = FrameType_Command; //(0x00)
-  commandFrame[2] = CMD_MultiplePollInstruction; //0x27
-  commandFrame[3] = 0x00; // ParamLen MSB
-  commandFrame[4] = 0x03; // ParamLen LSB
-  commandFrame[5] = 0x22;  // Param (Reserved? Always 0x22 for this command)
-  commandFrame[6] = 0xFF;  // Param (Count of polls, MSB)
-  commandFrame[7] = 0xFF;  // Param (Count of polls, LSB)
-  commandFrame[8] = 0x4A; // LSB of commandFrame[2] + commandFrame[3] + commandFrame[4] + commandFrame[5] + commandFrame[6] + commandFrame[7] (full value is 0x024A)
-  commandFrame[9] = R200_FrameEnd;
-
-  _serial->write(commandFrame, 10);
+void R200::setMultiplePollingMode(bool enable){
+  if(enable){
+    uint8_t commandFrame[10] = {0};
+    commandFrame[0] = R200_FrameHeader;
+    commandFrame[1] = FrameType_Command; //(0x00)
+    commandFrame[2] = CMD_MultiplePollInstruction; //0x27
+    commandFrame[3] = 0x00; // ParamLen MSB
+    commandFrame[4] = 0x03; // ParamLen LSB
+    commandFrame[5] = 0x22;  // Param (Reserved? Always 0x22 for this command)
+    commandFrame[6] = 0xFF;  // Param (Count of polls, MSB)
+    commandFrame[7] = 0xFF;  // Param (Count of polls, LSB)
+    commandFrame[8] = 0x4A; // LSB of commandFrame[2] + commandFrame[3] + commandFrame[4] + commandFrame[5] + commandFrame[6] + commandFrame[7] (full value is 0x024A)
+    commandFrame[9] = R200_FrameEnd;
+    _serial->write(commandFrame, 10);
+  }
+  else {
+    uint8_t commandFrame[7] = {0};
+    commandFrame[0] = R200_FrameHeader;
+    commandFrame[1] = FrameType_Command; //(0x00)
+    commandFrame[2] = CMD_StopMultiplePoll; //0x28
+    commandFrame[3] = 0x00; // ParamLen MSB
+    commandFrame[4] = 0x00; // ParamLen LSB
+    commandFrame[5] = 0x28; // LSB of commandFrame[2] + commandFrame[3] + commandFrame[4]
+    commandFrame[6] = R200_FrameEnd;
+    _serial->write(commandFrame, 7);
+  }
 }
 
-
 uint8_t R200::calculateCheckSum(uint8_t *buffer){
-
   // Extract how many parameters there are in the buffer
   uint16_t paramLength = buffer[3];
   paramLength<<=8;

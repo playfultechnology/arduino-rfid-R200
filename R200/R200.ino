@@ -27,14 +27,13 @@ void loop() {
   rfid.loop();
 
   // Periodically re-send the read command
-  if(millis() - lastResetTime > 4000){
+  if(millis() - lastResetTime > 1000){
     //  digitalWrite(LED_BUILTIN, HIGH);
-      rfid.poll();
-      rfid.dumpUIDToSerial();
-  //rfid.getModuleInfo();
+    rfid.poll();
+    //rfid.dumpUIDToSerial();
+    //rfid.getModuleInfo();
     //  digitalWrite(LED_BUILTIN, LOW);
-      lastResetTime = millis();
+    lastResetTime = millis();
   }
-  
   delay(1000);
 }
